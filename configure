@@ -1,0 +1,55 @@
+#!/bin/bash
+
+#Project Details
+MAIN="main.cc"
+USEBUILDDIR="yes"
+BUILDDIRNAME="build"
+REQUIREINCLUDES="no" #set if you use any non-STL libraries
+INCLUDES="" #names of any includes. Example: gtkmm-3.0
+#This should be the pkg-config name, so that it can be searched for.
+
+#CannonConfigure internal variables. Edit if you need to change compiler
+versionnumber=0.0.1
+cppcompilers=(g++ c++ x86_64-w64-mingw32-g++ i686-w64-mingw32-g++ clang++)
+ccompilers=(gcc clang cc x86_64-mingw32-gcc i686-w64-mingw32-gcc)
+
+echo "CannonConfigure ./configure script, version $versionnumber"
+
+chosencompiler="errornocompile"
+
+for i in $cppcompilers
+do
+	which $i > /dev/null 2>&1
+	if [ $? = 0 ]; then
+		chosencompiler=$i
+		break
+	fi
+done
+
+if [ $chosencompiler = "errornocompile" ]; then
+	echo -e "\033[1;31mERROR: No suitable C++ compiler found.\033[m"
+	echo "Please install a compiler from this list, or specify your own in the ./configure script."
+	for i in $cppcompilers
+	do
+		echo $i
+	done
+else
+	echo -e "\033[32mFound $chosencompiler\033[m"
+fi
+
+if [ $REQUIREINCLUDES = "yes" ]; then
+	pkg-config $INCLUDES
+	if [ $? = 0 ]; then
+		echo -e "Found $INCLUDES"
+	fi
+fi
+
+echo -e "\007\033[1;32mConfigure complete.\033[m"
+echo "You may now make the project. To do so, type: 
+"
+if [ $USEBUILDDIR = "yes" ]; then
+	echo "cd $BUILDDIRNAME"
+fi
+echo "make
+
+and the project will build itself."
