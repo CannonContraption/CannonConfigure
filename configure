@@ -5,8 +5,9 @@ MAIN="main.cc"
 USEBUILDDIR="yes"
 BUILDDIRNAME="build"
 REQUIREINCLUDES="no" #set if you use any non-STL libraries
-INCLUDES="" #names of any includes. Example: gtkmm-3.0
+INCLUDES=("") #names of any includes. Example: gtkmm-3.0
 #This should be the pkg-config name, so that it can be searched for.
+#Note that each package should be enclosed in quotes, space separated
 
 #CannonConfigure internal variables. Edit if you need to change compiler
 versionnumber=0.0.1
@@ -38,10 +39,13 @@ else
 fi
 
 if [ $REQUIREINCLUDES = "yes" ]; then
-	pkg-config $INCLUDES
-	if [ $? = 0 ]; then
-		echo -e "Found $INCLUDES"
-	fi
+	for i in $INCLUDES
+	do
+		pkg-config $i
+		if [ $? = 0 ]; then
+			echo -e "Found $i"
+		fi
+	done
 fi
 
 echo -e "\007\033[1;32mConfigure complete.\033[m"
