@@ -39,6 +39,21 @@ if [ $LANGUAGE = "Java" ]; then
 	compilerset=$javacompilers
 fi
 
+if [ $# -gt 1 ]; then
+	compilernext="no"
+	for i in $@
+	do
+		if [ $compilernext = "yes" ]; then
+			compilerset=($i)
+		fi
+		if [ $i = "-c" ]; then
+			compilernext="yes"
+		fi
+	done
+fi
+
+
+echo -e "\033[33mFinding compiler...\033[m"
 for i in $compilerset
 do
 	which $i > /dev/null 2>&1
@@ -115,6 +130,27 @@ echo "$NAME: $MAIN
 
 default: $MAIN
 	$compilersequence" > Makefile
+
+if [ $LANGUAGE = "C++" ]; then
+	echo >> Makefile
+	echo "debug: $MAIN">>Makefile
+	echo "	$compilersequence -g">>Makefile
+fi
+if [ $LANGUAGE = "C" ]; then
+	echo >>Makefile
+	echo "debug: $MAIN">>Makefile
+	echo "	$compilersequence -g">>Makefile
+fi
+
+if [ $LANGUAGE = "Java" ]; then
+	echo >>Makefile
+	echo "rejavac:" >> Makefile
+	if [ $USEBUILDDIR = "yes" ]; then
+		echo "	$chosencompiler ../*.java" >> Makefile
+	else
+		echo "	$chosencompiler *.java" >> Makefile
+	fi
+fi
 
 echo -e "\033[1;32mConfigure complete.\033[m"
 echo "You may now make the project. To do so, type: 
