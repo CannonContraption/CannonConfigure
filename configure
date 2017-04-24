@@ -5,22 +5,41 @@ NAME="project_name"
 MAIN="main.cc"
 USEBUILDDIR="yes"
 BUILDDIRNAME="build"
+LANGUAGE="C++"
 REQUIREINCLUDES="no" #set if you use any non-STL libraries
 INCLUDES=("") #names of any includes. Example: gtkmm-3.0
 #This should be the pkg-config name, so that it can be searched for.
 #Note that each package should be enclosed in quotes, space separated
 
+#Language Options: (set the $LANGUAGE variable)
+#
+# C
+# C++
+# Java
+
 #CannonConfigure internal variables. Edit if you need to change compiler
 versionnumber=0.0.1
 cppcompilers=(g++ c++ x86_64-w64-mingw32-g++ i686-w64-mingw32-g++ clang++)
 ccompilers=(gcc clang cc x86_64-mingw32-gcc i686-w64-mingw32-gcc)
+javacompilers=("javac")
+compilerset=$cppcompilers
 
 echo "CannonConfigure ./configure script, version $versionnumber"
 
 chosencompiler="errornocompile"
 compilersequence="errornocompile"
 
-for i in $cppcompilers
+if [ $LANGUAGE = "C" ]; then
+	compilerset=$ccompilers
+fi
+if [ $LANGUAGE = "C++" ]; then
+	compilerset=$cppcompilers
+fi
+if [ $LANGUAGE = "Java" ]; then
+	compilerset=$javacompilers
+fi
+
+for i in $compilerset
 do
 	which $i > /dev/null 2>&1
 	if [ $? = 0 ]; then
@@ -32,7 +51,7 @@ done
 if [ $chosencompiler = "errornocompile" ]; then
 	echo -e "\033[1;31mERROR: No suitable C++ compiler found.\033[m"
 	echo "Please install a compiler from this list, or specify your own in the ./configure script."
-	for i in $cppcompilers
+	for i in $compilerset
 	do
 		echo $i
 	done
@@ -80,7 +99,15 @@ if [ $USEBUILDDIR = "yes" ]; then
 	MAIN="../$MAIN"
 fi
 
-compilersequence="$chosencompiler $MAIN -o $NAME"
+if [ $LANGUAGE = "C++" ]; then
+	compilersequence="$chosencompiler $MAIN -o $NAME"
+fi
+if [ $LANGUAGE = "C" ]; then
+	compilersequence="$chosencompiler $MAIN -o $NAME"
+fi
+if [ $LANGUAGE = "Java" ]; then
+	compilersequence=$chosencompiler $MAIN
+fi
 
 touch Makefile
 echo "$NAME: $MAIN
