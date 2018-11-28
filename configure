@@ -18,17 +18,23 @@ INCLUDES=("") #names of any includes. Example: gtkmm-3.0
 # Java
 
 #CannonConfigure internal variables. Edit if you need to change compiler
-versionnumber=0.0.1
+versionnumber=0.0.2
 cppcompilers=(g++ c++ x86_64-w64-mingw32-g++ i686-w64-mingw32-g++ clang++)
 ccompilers=(gcc clang cc x86_64-mingw32-gcc i686-w64-mingw32-gcc)
-javacompilers=("javac")
+javacompilers=(javac)
 compilerset=$cppcompilers
 
 echo "CannonConfigure ./configure script, version $versionnumber"
 
+# These are the compiler choices in a variable. They're both set to
+# errornocompile so that if we are in a situation we can't handle, we know that
+# and can error out rather than just crashing cryptically.
 chosencompiler="errornocompile"
 compilersequence="errornocompile"
 
+# Now we set which compiler set we use.
+#
+# This is specified project-to-project in the early project details variables.
 if [ $LANGUAGE = "C" ]; then
 	compilerset=$ccompilers
 fi
@@ -39,6 +45,8 @@ if [ $LANGUAGE = "Java" ]; then
 	compilerset=$javacompilers
 fi
 
+# This section is for scanning through compiler sets and selecting one based on
+# user arguments. That's all that gets passed to the input.
 if [ $# -gt 1 ]; then
 	compilernext="no"
 	for i in $@
@@ -52,7 +60,9 @@ if [ $# -gt 1 ]; then
 	done
 fi
 
-
+# Now we look for the first compiler on the system to set and use.
+#
+# Reads through the tuples, giving priorities to the earlier entries in the list.
 echo -e "\033[33mFinding compiler...\033[m"
 for i in $compilerset
 do
@@ -63,9 +73,11 @@ do
 	fi
 done
 
+# This is the error checking we've talked about
 if [ $chosencompiler = "errornocompile" ]; then
 	echo -e "\033[1;31mERROR: No suitable C++ compiler found.\033[m"
-	echo "Please install a compiler from this list, or specify your own in the ./configure script."
+	echo -n "Please install a compiler from this list, or specify your own"
+        echo    " in the ./configure script."
 	for i in $compilerset
 	do
 		echo $i
@@ -75,6 +87,12 @@ else
 	echo -e "\033[32mFound $chosencompiler\033[m"
 fi
 
+# And here we validate the source files- making sure each one exists as it
+# should. First we start by making sure we have a main somewhere.
+#
+# It should be noted at this point that this script is designed for complete
+# programs, not application libraries. This doesn't neccesarily preclude the
+# possibility of using it with a library, but that is not its intended function.
 echo -e "\033[33mChecking required source files...\033[m"
 if [[ -f $MAIN ]]; then
 	echo -e "\033[32mFound $MAIN.\033[m"
@@ -84,6 +102,9 @@ else
 	exit 1
 fi
 
+# Here we check that each included library exists in the system. This means that
+# if we need a library that doesn't exist on the system, we're not dead in the
+# water trying to compile against somethinng mythical.
 if [ $REQUIREINCLUDES = "yes" ]; then
 	for i in $INCLUDES
 	do
@@ -97,6 +118,13 @@ if [ $REQUIREINCLUDES = "yes" ]; then
 	done
 fi
 
+# Now we handle cases where the user wants a build dir. Arguably, things should
+# always be built in a separate directory, and this makes that possible.
+#
+# We first test to make sure that's what we want. If so, we continue by checking
+# to see if the directory already exists. If it does, then we just use the
+# existing directory. If it doesn't, then we simply create it so that we can
+# move forward with the build.
 if [ $USEBUILDDIR = "yes" ]; then
 	if [[ -d "$BUILDDIRNAME" ]]; then
 		echo -e "\033[32mWe have a build dir\033[m"
@@ -114,6 +142,7 @@ if [ $USEBUILDDIR = "yes" ]; then
 	MAIN="../$MAIN"
 fi
 
+# Now we create the build line. 
 if [ $LANGUAGE = "C++" ]; then
 	compilersequence="$chosencompiler $MAIN -o $NAME"
 fi
@@ -124,6 +153,10 @@ if [ $LANGUAGE = "Java" ]; then
 	compilersequence=$chosencompiler $MAIN
 fi
 
+# Now we create a very simple almost one-line makefile. At some point in the
+# future, this program could be extended to make multi-line files chaining one
+# configure run after another recursively, but for now it just builds something
+# basic that allows for building and not much else.
 touch Makefile
 echo "$NAME: $MAIN
 	$compilersequence
@@ -131,6 +164,8 @@ echo "$NAME: $MAIN
 default: $MAIN
 	$compilersequence" > Makefile
 
+# Now we have our main target, we need a debug target so that the choice of
+# including debugging symbols can happen at build-time.
 if [ $LANGUAGE = "C++" ]; then
 	echo >> Makefile
 	echo "debug: $MAIN">>Makefile
@@ -142,6 +177,7 @@ if [ $LANGUAGE = "C" ]; then
 	echo "	$compilersequence -g">>Makefile
 fi
 
+# Java doesn't have a deub target per-se, so we just recreate the javac target.
 if [ $LANGUAGE = "Java" ]; then
 	echo >>Makefile
 	echo "rejavac:" >> Makefile
@@ -152,6 +188,7 @@ if [ $LANGUAGE = "Java" ]; then
 	fi
 fi
 
+# Then inform the user all went well, they can continue to make their project.
 echo -e "\033[1;32mConfigure complete.\033[m"
 echo "You may now make the project. To do so, type: 
 "
